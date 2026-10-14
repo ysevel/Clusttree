@@ -1,8 +1,7 @@
 ##!/usr/bin/python
-import os,sys
-import glob
+import os
 from datetime import datetime
-import numpy as np 
+#import numpy as np #not used at the moment, keep as reference for potentiel improvements)
 import pandas as pd
 import argparse
 import subprocess
@@ -14,7 +13,6 @@ from pathlib import Path
 from textwrap import dedent as twdd
 from multiprocessing import cpu_count, Manager, Lock
 from Bio import SeqIO
-from Bio import Entrez
 
 # Global variables
 manager = Manager()
@@ -47,10 +45,10 @@ def handle_program_options():
     group.add_argument('-d', '--download_refseq', help='Output folder to download the whole refseq database for bacteria and archeae. Other databaese can be used, but have to be downloaded manually.')
     return parser.parse_args()
 
-def generate_reference(path_ref_list, output_dir, nb_threads, logger):
+def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
     '''This function generate a mesh distance matrix from a list of reference genomes.'''
     logger.info("Running Mash distance sketch matrix")
-    os.mkdir(output_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
     log_mash=f"{output_dir}/mash_dist_{suffix}.log"
     output_mesh_file=f"{output_dir}/NCBI_repr_{suffix}.msh" #output file get automatically named, it can be changed safely here.
     cmd_mash=f"mash sketch -p {nb_threads} -l {path_ref_list} -o {output_mesh_file}"
@@ -148,12 +146,12 @@ def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref_gbk,
             logger.info(f"running snippy on {SAG_id} with the command: {command_snippy_variant}")
             subprocess.run(command_snippy_variant,stdout=log_v, stderr=subprocess.STDOUT, shell=True)
             snpeff_ref_dir=f"{output_dir}/{SAG_id}/reference"
-        os.chdir(output_dir)
+        #os.chdir(output_dir) #obsolete, can lead to various annoying bugs.
         sag_str=' '.join(f"{str(e)}" for e in sag_id_list) #check the output.
         command_snippy_core=f"snippy-core --ref {closest_ref_gbk} {sag_str} --prefix {suffix}_{reference_name}"
         logger.info(f"running snippy core for {reference_name}")
         logger.info(command_snippy_core)
-        subprocess.run(command_snippy_core,stdout=log_v, stderr=subprocess.STDOUT, shell=True)
+        subprocess.run(command_snippy_core,cwd=output_dir, stdout=log_v, stderr=subprocess.STDOUT, shell=True)
         logger.info(f"snippy core done, preparing subtree prediction")
         logger.info(f"compute mutation frequencies")
         #run IQ-tree to compute the initial tree
@@ -165,7 +163,7 @@ def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref_gbk,
         logger.info("running ClonalFramel on the initial tree")
         cmd_clonalframe=f"ClonalFrameML {output_dir}/{suffix}_subtree_{reference_name}.treefile {output_dir}/{suffix}_{reference_name}.full.aln {output_dir}/{suffix}_{reference_name}_CFML -output_filtered true -ignore_incomplete_sites true" #produce filtered variant fasta
         logger.info(f"Clonalframe command: {cmd_clonalframe}")
-        subprocess.run(cmd_clonalframe, stdout=log_v, stderr=subprocess.STDOUT, shell=True) #ERROR: currently clonalframe won't run on genouest.
+        subprocess.run(cmd_clonalframe,cwd=output_dir , stdout=log_v, stderr=subprocess.STDOUT, shell=True) #ERROR: currently clonalframe won't run on genouest.
         logger.info("Running IQ tree on the recombination free alignement")
         #run IQ-tree on the filtered variants:
         cmd_iqtree_filtered=f"iqtree -T AUTO -s {output_dir}/{suffix}_{reference_name}_CFML.filtered.fasta -m MFP --prefix {suffix}_subtree_{reference_name} -safe"
@@ -274,7 +272,7 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threads, em
         path_ref= db_path
         logger.info(f"Downloading refseq database in {path_ref}")
         path_ref_list=f"{run_dir}/Path_ref_{suffix}_list.txt"
-        ref_file=download_reference(path_ref, suffix, path_ref_list, nb_threads, logger)
+        ref_file=download_reference(path_ref, path_ref_list, suffix, nb_threads, logger)
     elif ref_list_path:
         path_ref_list=ref_list_path
         logger.info("The option generate ref mesh file is activated, running mash sketch on the references list")
@@ -359,8 +357,6 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threads, em
         os.makedirs(f"{output_snippy}", exist_ok=True)
         #creation of the subtree for the current cluster.
         variantcalling(path_input, output_snippy, SAGs_list, nb_threads, ref_gbk, suffix, logger)
-
-        #ici la fonction qui va compter le nb de ref
        
     #creating the tree of life using getphylo:
     #determine the reference that cluster the most SAGs.
