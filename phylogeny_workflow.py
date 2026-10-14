@@ -61,9 +61,10 @@ def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, log
     os.makedirs(f"{output}/mash_distance", exist_ok=True)
     mash_dist_file=f"{output}/mash_distance/{id_sample}_dist_NCBI.txt" #format of the output individual distance matrix.
     cmd_mash=f"mash dist -p 4 {ref_mash} {assembly_file} > {output}/mash_distance/{id_sample}_dist_NCBI.txt"
-    #logger.info(f"the mash command is: {cmd_mash}")
+    #logger.debug(f"the mash command is: {cmd_mash}")
     log_mash=f"{output}/{id_sample}_{suffix}_filter_reads.log"
-    results = subprocess.run(cmd_mash, capture_output=True, shell=True, check=True)
+    with open(log_mash, "a") as log_m:
+        results = subprocess.run(cmd_mash, stdout=log_m, stderr=subprocess.STDOUT, shell=True, check=True)
     #logger.info(results.stdout.strip()) #should look at the output in details in the log. is that the b'' in the log? to test before release...
     return mash_dist_file
 
@@ -73,7 +74,7 @@ def download_reference(ref_dir, suffix, path_ref_list, nb_threads, logger):
     os.makedirs(f"{ref_dir}", exist_ok=True)
     fasta_out_folder=f"{ref_dir}/fasta"
     logger.info(f"Downloading reference file from NCBI refseq, the fasta are stored in {fasta_out_folder}.")
-    logger.info(f"Starting downloading refseq reference genome on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
+    logger.debug(f"Starting downloading refseq reference genome on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
     cmd_ncbi_download_fasta=f"ncbi-genome-download bacteria,archaea -s refseq -F fasta -R reference -o {fasta_out_folder} --flat-output -r 2 -m {path_ref_list}/reference_db_{suffix}_metadata.tab"
     subprocess.run(cmd_ncbi_download_fasta, shell=True, check=True)
     logger.info(f"download of the referene sequences end. The metadata are available in {ref_dir}_{suffix}_refseq_metadata.tab")
@@ -99,7 +100,7 @@ def closest_ref_finder(id_sample, mash_dist_file, nb_closest_ref, reference_grou
         top_ref=df.nsmallest(nb_closest_ref, "distance") #maybe not usefull any longer
         out_file=f"{output}/mash_distance/{id_sample}_top_ref.csv" #save top ref into msh distance folder for tracability
         top_ref.to_csv(out_file, index=False)
-        logger.info(f"The {nb_closest_ref}th top ref are writen in the file: {out_file}") #do we keep it or not? can be used for fastANI...
+        logger.debug(f"The {nb_closest_ref}th top ref are writen in the file: {out_file}") #do we keep it or not? can be used for fastANI...
         closest_ref=df.nsmallest(1, "distance").iloc[0]
         closest_ref_name=str(closest_ref["reference"])
         file_name=os.path.basename(closest_ref_name)
@@ -110,7 +111,7 @@ def closest_ref_finder(id_sample, mash_dist_file, nb_closest_ref, reference_grou
     #Check if the accession exist, if so, save it and return it.
     if match:
         accession= match.group(0) #if a accession exist in the file name, return the accession.
-        logger.info(f"The closest reference for {id_sample} is {accession}.") #save the accession in the log for each SAG, for verification steps.
+        logger.debug(f"The closest reference for {id_sample} is {accession}.") #save the accession in the log for each SAG, for verification steps.
     else:
         logger.error(f"Reference accession  not found for {id_sample}") #if no accession in the file name, return an error and write it in the log.
     return closest_ref_name, accession
@@ -135,7 +136,7 @@ def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref_gbk,
     '''Function to peform variant calling and phylogeny on a cluster of strains using the same reference, the reference is used to align all assembly and perform variant calling, recombinasion free phylogeny is comptued using IQ-tree and ClonalFrameML '''
     log_snippy=f"{output_dir}/snippy_{suffix}.log"
     with open(log_snippy,'w') as log_v:
-        logger.info(f"running snippy on each fasta file associated with {closest_ref_gbk}: {sag_list}")
+        logger.debug(f"running snippy on each fasta file associated with {closest_ref_gbk}: {sag_list}")
         sag_id_list=[]
         reference_name=Path(closest_ref_gbk).stem
         #run snippy for each genome:
@@ -143,31 +144,28 @@ def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref_gbk,
             SAG_id=Path(SAGs).stem
             sag_id_list.append(SAG_id)
             command_snippy_variant=f"snippy --ctgs '{SAGs}' --ref {closest_ref_gbk} --cpus {nb_threads} --outdir {output_dir}/{SAG_id}"
-            logger.info(f"running snippy on {SAG_id} with the command: {command_snippy_variant}")
+            logger.debug(f"running snippy on {SAG_id} with the command: {command_snippy_variant}")
             subprocess.run(command_snippy_variant,stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True)
             snpeff_ref_dir=f"{output_dir}/{SAG_id}/reference"
         #os.chdir(output_dir) #obsolete, can lead to various annoying bugs.
         sag_str=' '.join(f"{str(e)}" for e in sag_id_list) #check the output.
         command_snippy_core=f"snippy-core --ref {closest_ref_gbk} {sag_str} --prefix {suffix}_{reference_name}"
         logger.info(f"running snippy core for {reference_name}")
-        logger.info(command_snippy_core)
+        logger.debug(command_snippy_core)
         subprocess.run(command_snippy_core,cwd=output_dir, stdout=log_v, stderr=subprocess.STDOUT, shell=True, check =True)
         logger.info(f"snippy core done, preparing subtree prediction")
-        logger.info(f"compute mutation frequencies")
-        #run IQ-tree to compute the initial tree
-        logger.info(f"population genomic is done.")
         cmd_iqtree=f"iqtree -T AUTO -s {output_dir}/{suffix}_{reference_name}.full.aln -m MFP --prefix {suffix}_subtree_{reference_name} -safe" #use the maximal amount of threads.
-        logger.info(f"running iqtree: {cmd_iqtree}")
+        logger.debug(f"running iqtree: {cmd_iqtree}")
         subprocess.run(cmd_iqtree, stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True)
         #filter recombination event:
         logger.info("running ClonalFramel on the initial tree")
         cmd_clonalframe=f"ClonalFrameML {output_dir}/{suffix}_subtree_{reference_name}.treefile {output_dir}/{suffix}_{reference_name}.full.aln {output_dir}/{suffix}_{reference_name}_CFML -output_filtered true -ignore_incomplete_sites true" #produce filtered variant fasta
-        logger.info(f"Clonalframe command: {cmd_clonalframe}")
+        logger.debug(f"Clonalframe command: {cmd_clonalframe}")
         subprocess.run(cmd_clonalframe,cwd=output_dir , stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True) #ERROR: currently clonalframe won't run on genouest.
         logger.info("Running IQ tree on the recombination free alignement")
         #run IQ-tree on the filtered variants:
         cmd_iqtree_filtered=f"iqtree -T AUTO -s {output_dir}/{suffix}_{reference_name}_CFML.filtered.fasta -m MFP --prefix {suffix}_subtree_{reference_name} -safe"
-        logger.info(f"final iq tree command: {cmd_iqtree_filtered}")
+        logger.debug(f"final iq tree command: {cmd_iqtree_filtered}")
         subprocess.run(cmd_iqtree_filtered, stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True) #currently unavailable, must be put back on for the full intended workflow.
         logger.info(f"subtree succesfully computed for {closest_ref_gbk}")
         annotate_variants(output_dir, suffix, nb_threads, reference_name, snpeff_ref_dir, logger)
@@ -197,7 +195,7 @@ def generate_chrom_map(config_file, output_map_file, logger):
         with open(output_map_file, 'w') as out:
             for i, chrom_name in enumerate(chromosomes, start=1):
                 out.write(f"{i} {chrom_name}\n")
-        logger.info(f"correspondance table succesfully generated : {output_map_file}")
+        logger.debug(f"correspondance table succesfully generated : {output_map_file}")
 
     except FileNotFoundError:
         logger.error(f"The contig file {config_file} cannot be found.")
@@ -216,14 +214,14 @@ def annotate_variants(path_subtree, suffix, nb_threads, reference_name, snpeff_r
         #cmd_vcf=f"snp-sites -v -o {path_subtree}/{suffix}_{reference_name}_CFML_filtered_variants.vcf {path_subtree}/{suffix}_{reference_name}_CFML " #old version for Use with clonalframe replace the new with the old when the problem is fixed with clonal frame
         subprocess.run(cmd_vcf, stdout=log_a, stderr=subprocess.STDOUT, shell=True, check=True)
         snpeff_config_file= f"{snpeff_ref_dir}/snpeff.config"
-        logger.info(f"snpeff config file: {snpeff_config_file}")
+        logger.debug(f"snpeff config file: {snpeff_config_file}")
         chrom_map_file= f"{path_subtree}/renamme_chr.txt"
         generate_chrom_map(snpeff_config_file, chrom_map_file, logger)
 
         #generate the distance matrix
         cmd_ditance_matrix=f"snp-dists {path_subtree}/{suffix}_{reference_name}_CFML.filtered.fasta > {path_subtree}/{suffix}_{reference_name}_dist_matrix.tsv"
         subprocess.run(cmd_ditance_matrix, stdout=log_a, stderr=subprocess.STDOUT, shell=True, check=True)
-        logger.info(f"Distance matrix generated: {path_subtree}/{suffix}_{reference_name}_dist_matrix.tsv")
+        logger.debug(f"Distance matrix generated: {path_subtree}/{suffix}_{reference_name}_dist_matrix.tsv")
 
         #annotate the SNP
         cmd_annotate=f"bcftools annotate --rename-chrs {chrom_map_file} {path_subtree}/{suffix}_{reference_name}_predicted_variants.vcf > {path_subtree}/{suffix}_{reference_name}_temp.vcf"
@@ -275,7 +273,7 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
         ref_file=download_reference(path_ref, path_ref_list, suffix, nb_threads, logger)
     elif ref_list_path:
         path_ref_list=ref_list_path
-        logger.info("The option generate ref mesh file is activated, running mash sketch on the references list")
+        logger.info("Running mash sketch on the references list")
         ref_file=generate_reference(path_ref_list, output_dir, nb_threads, logger)
     else:
         logger.info(f"Running mash on {ref_file}")
@@ -295,7 +293,7 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
     logger.info(f"reference prediction finished. annotating closest refereneces")
     for gb_file in genbank_files:
         #convert genbank in fasta
-        logger.info(f"Processing file: {gb_file}")
+        logger.debug(f"Processing file: {gb_file}")
         shutil.copy(f"{gb_file}", f"{genbank_output}") #copy gb files to the genbank folder to avoid to put the references in the input folder.
         strain_name=Path(gb_file).stem
         fasta_file = f"{fasta_folder}/{strain_name}.fasta"
@@ -305,7 +303,7 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
         fasta_files.append(fasta_file)
         id_sample=os.path.splitext(os.path.basename(fasta_file))[0]
         #reference prediction
-        logger.info(f"assembly file found for {id_sample}, calculating mash distance\n")
+        logger.debug(f"assembly file found for {id_sample}, calculating mash distance\n")
         mash_dist_f=launch_mash(input_assembly, id_sample, ref_file, run_dir, suffix, nb_threads, logger)
         closest_reference,accession =closest_ref_finder(id_sample, mash_dist_f, nb_ref, reference_groups, run_dir, logger) #Keep only the closest reference and its accession
         reference_name=Path(closest_reference).stem
@@ -321,7 +319,7 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
             annot_dir=f"{run_dir}/references_annotation"
             os.makedirs(f"{annot_dir}", exist_ok=True) #save the annotation for the reference in a separate folder.
             cmd_bakta=f"bakta -t {nb_threads} --output {annot_dir}/{accession}_annot -p {accession}_{safe_taxname} --force --compliant {closest_reference}" #Meant to use the default variable for bakta db... set it ahead of running the workflow...
-            logger.info(f"running bakta: {cmd_bakta}")
+            logger.debug(f"running bakta: {cmd_bakta}")
             subprocess.run(cmd_bakta, shell=True, check=True) #generate the annotation for the reference, the file will be in the annotation folder named after the ref accession and taxname.
             shutil.copy(f"{annot_dir}/{accession}_annot/{accession}_{safe_taxname}.gbff", f"{genbank_output}") #copy each ref into the genbnak folder for getphylo
             gb_file=f"{annot_dir}/{accession}_annot/{accession}_{safe_taxname}.gbff"
@@ -340,7 +338,6 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
     ref_file=f"{run_dir}/references_list.csv"
     with open(ref_file , 'w') as ref_f:
         ref_f.write(f'reference,taxon name,nb_SAGs\n')
-    print(f"reference annotation ended, processing variant calling with snippy on {len(reference_list)} subset.")
     logger.info(f"reference annotation ended, processing variant calling with snippy on {len(reference_list)} subset.")
 
     #this function will cluster the strains according to their closest reference, and run the variant calling function on each cluster.
@@ -365,8 +362,8 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
     output_getphylo = f"{run_dir}/whole_collection_tree"
     os.makedirs(output_getphylo, exist_ok=True)
     seed=f"{genbank_output}/{best_ref_data['accession']}_{best_ref_data['taxname']}.gbff"
-    logger.info(f"The most abundant reference is: {best_ref} ({len(best_ref_data['SAGs'])} SAGs)")
-    logger.info(f"Running getphylo with {seed} as a seed")
+    logger.info(f"The most abundant reference is: {best_ref} ({len(best_ref_data['SAGs'])} SAGs) it will be used as a seed by getphylo")
+    logger.debug(f"Running getphylo with {seed} as a seed")
     #run getphylo using the most abundant cluster as a seed.
     getphylo(genbank_output, output_getphylo, seed, nb_threads, logger)
     
