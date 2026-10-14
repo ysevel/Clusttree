@@ -239,7 +239,7 @@ def annotate_variants(path_subtree, suffix, nb_threads, reference_name, snpeff_r
 
 
 #execution du programme
-def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threads):
+def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_path=None, ref_list_path=None):
     ###initialization variables
     os.makedirs(f"{run_dir}", exist_ok=True)
     log_file = f"{run_dir}/closest_ref_predictor_{suffix}.log"
@@ -387,7 +387,7 @@ if __name__ == "__main__": #note: à modifier pour supprimer checkM et passer le
 
     message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : closest reference selection start for {suffix}\n"
     print(message)    
-    process_sample(path_input, suffix, ref_file, nb_ref, output, nb_threads)
+    process_sample(path_input, suffix, ref_file, nb_ref, output, nb_threads, db_path=arguments.db_path, ref_list_path=arguments.ref_list_path)
     message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : phylogeny end for {suffix}\n"
     print(message)
 
