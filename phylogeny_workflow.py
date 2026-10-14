@@ -38,7 +38,6 @@ def handle_program_options():
                         help="suffix added to each output file")
     parser.add_argument('-m', '--metadata_file', help="path to the reference database metadatas") #not used at the moment, obsolete? maybe turn into an output later on
     parser.add_argument('-n', '--nb_closest_ref', type=int, default=1, help="number of ref to be included. it will select the x closest reference from the query genome (default=1)") #keep to be able switch to mixed ref prediction
-    parser.add_argument('-e', '--email', required=True, help='an email adress to be provided to Entrez as it is required to use E-utilities.') #maybe hardcode it in the code?
     group = parser.add_mutually_exclusive_group(required=True) #optional starting point for the pipeline, either build the db, or construct mash matrix or calculate the distance to an existing matrix.
     group.add_argument('-r', '--reference_mesh_file', help="reference mash mesh file to use as a comparison with each SAG to determine the closest reference file.")
     group.add_argument('-l', '--references_list', help= "file with the list of references to generate the mash mesh file from.")
@@ -240,7 +239,7 @@ def annotate_variants(path_subtree, suffix, nb_threads, reference_name, snpeff_r
 
 
 #execution du programme
-def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threads, email):
+def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threads):
     ###initialization variables
     os.makedirs(f"{run_dir}", exist_ok=True)
     log_file = f"{run_dir}/closest_ref_predictor_{suffix}.log"
@@ -382,14 +381,13 @@ if __name__ == "__main__": #note: à modifier pour supprimer checkM et passer le
     ref_file=arguments.reference_mesh_file
     metadata=arguments.metadata_file
     nb_threads=arguments.threads
-    nb_ref=arguments.nb_closest_ref
-    email=arguments.email
+    nb_ref=arguments.nb_closest_refl
     db_path=arguments.download_refseq
     ref_list_path=arguments.references_list
 
     message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : closest reference selection start for {suffix}\n"
     print(message)    
-    process_sample(path_input, suffix, ref_file, nb_ref, output, nb_threads, email)
+    process_sample(path_input, suffix, ref_file, nb_ref, output, nb_threads)
     message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : phylogeny end for {suffix}\n"
     print(message)
 
