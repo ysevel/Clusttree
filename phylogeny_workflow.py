@@ -120,7 +120,7 @@ def getphylo(genbank_dir,output_getphylo, seed, nb_threads, logger):
     '''Compute the community tree based on all the SAgs and all the predicted closest references using getphylo workflow, use the reference from the most abundant cluster as a seed to run the workflow.'''
     #run getphylo to produce a tree of life, get a selection of references to add to the tree.
     output_getphylo = os.path.abspath(output_getphylo)
-    if output_getphylo.startswith(run_dir):
+    if output_getphylo.startswith(run_dir): #delete the folder if it already exist, getphylo does not work on previous run... check that output_getphylo start with run_dir for safety.
         shutil.rmtree(output_getphylo)
         logger.warning(f"The folder {output_getphylo} already exist, it has been deleted for getphylo to run again.")
     os.makedirs(f"{output_getphylo}", exist_ok=True)
