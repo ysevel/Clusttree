@@ -49,9 +49,10 @@ def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
     logger.info("Running Mash distance sketch matrix")
     os.makedirs(output_dir, exist_ok=True)
     log_mash=f"{output_dir}/mash_dist_{suffix}.log"
-    output_mesh_file=f"{output_dir}/NCBI_repr_{suffix}.msh" #output file get automatically named, it can be changed safely here.
-    cmd_mash=f"mash sketch -p {nb_threads} -l {path_ref_list} -o {output_mesh_file}"
-    subprocess.run(cmd_mash, shell=True)
+    with open(log_mash,"a") as log_m:
+        output_mesh_file=f"{output_dir}/NCBI_repr_{suffix}.msh" #output file get automatically named, it can be changed safely here.
+        cmd_mash=f"mash sketch -p {nb_threads} -l {path_ref_list} -o {output_mesh_file}"
+        subprocess.run(cmd_mash, stdout=log_m, stderr=subprocess.STDOUT, shell=True, check=True)
     return output_mesh_file #return the mash sketch file to be used in launch mash.
 
 def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, logger):
