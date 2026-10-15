@@ -1,3 +1,3 @@
-# src/clusttree/__init__.py
+# src/__init__.py
 
 __version__ = "0.1.0"
