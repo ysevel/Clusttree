@@ -59,24 +59,6 @@ def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
         subprocess.run(cmd_mash, stdout=log_m, stderr=subprocess.STDOUT, shell=True, check=True)
     return output_mesh_file #return the mash sketch file to be used in launch mash.
 
-
-def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, logger):
-    """
-    create the mash result directories and launch mash for each SAG on a reference mesh distance matrix.
-    """
-    os.makedirs(f"{output}/mash_distance", exist_ok=True)
-    mash_dist_file=f"{output}/mash_distance/{id_sample}_dist_NCBI.txt" #format of the output individual distance matrix.
-    #cmd_mash=f"mash dist -p 4 {ref_mash} {assembly_file} > {output}/mash_distance/{id_sample}_dist_NCBI.txt" #old version, keep temporarly if needed for rollback...
-    #logger.debug(f"the mash command is: {cmd_mash}")
-    log_mash=f"{output}/{id_sample}_{suffix}_filter_reads.log"
-    #run mash dist using the new wrapper run_command
-    rum_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file, log_mash)
-    #old way of calling subprocess:
-    #with open(mash_dist_file, "w") as out_mash, open(log_mash ,"a") as err:
-        #results = subprocess.run(["mash", "dist", "-p", str(threads), str(ref_mash], str(assembly_file)], stdout=out_mash, stderr=err, check=True)
-    #logger.info(results.stdout.strip()) #should look at the output in details in the log. is that the b'' in the log? to test before release...
-    return mash_dist_file
-
 def download_reference(ref_dir, suffix, path_ref_list, nb_threads, logger): 
     '''The function will automatically download the up to date refseq database for bacteria and archaea and run generate_reference on it to produce a new mesh distance matrix.'''  
     #download fasta and genbank files from NCBI refseq, designer to download the references from refseq, maybe add more custoim option later on
@@ -99,6 +81,23 @@ def download_reference(ref_dir, suffix, path_ref_list, nb_threads, logger):
             ref_path_f.write(f+"\n")
     reference_file=generate_reference(path_ref_list, output_dir, nb_threads, logger) #run generate_reference on the reference list.
     return reference_file #return the mesh distance matrix to be used as refence for the rest of the run.
+
+def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, logger):
+    """
+    create the mash result directories and launch mash for each SAG on a reference mesh distance matrix.
+    """
+    os.makedirs(f"{output}/mash_distance", exist_ok=True)
+    mash_dist_file=f"{output}/mash_distance/{id_sample}_dist_NCBI.txt" #format of the output individual distance matrix.
+    #cmd_mash=f"mash dist -p 4 {ref_mash} {assembly_file} > {output}/mash_distance/{id_sample}_dist_NCBI.txt" #old version, keep temporarly if needed for rollback...
+    #logger.debug(f"the mash command is: {cmd_mash}")
+    log_mash=f"{output}/{id_sample}_{suffix}_filter_reads.log"
+    #run mash dist using the new wrapper run_command
+    rum_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file, log_mash)
+    #old way of calling subprocess:
+    #with open(mash_dist_file, "w") as out_mash, open(log_mash ,"a") as err:
+        #results = subprocess.run(["mash", "dist", "-p", str(threads), str(ref_mash], str(assembly_file)], stdout=out_mash, stderr=err, check=True)
+    #logger.info(results.stdout.strip()) #should look at the output in details in the log. is that the b'' in the log? to test before release...
+    return mash_dist_file
 
 def closest_ref_finder(id_sample, mash_dist_file, nb_closest_ref, reference_groups, output, logger):
     '''return the closest reference form a mash distance matrix, extract the accession for the reference annotation and metadata generation, note: it is recommanded to use references with the proper NCBI accession in their names.'''
