@@ -20,6 +20,26 @@ current_missing_id_list = manager.list() #keep as an option if needed to exclude
 missing_id_lock = Lock() #same as above, to remove if not included in the final worflow...
 
 #functions
+def main():
+    arguments = handle_program_options() #reads the argument parser
+    
+    message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : closest reference selection start for {args.suffix}\n"
+    print(message)
+    
+    path_input = arguments.input
+    output = arguments.output           
+    suffix = arguments.suffix
+    ref_file=arguments.reference_mesh_file
+    metadata=arguments.metadata_file
+    nb_threads=arguments.threads
+    nb_ref=arguments.nb_closest_refl
+    db_path=arguments.download_refseq
+    ref_list_path=arguments.references_list
+   
+    process_sample(path_input, suffix, ref_file, nb_ref, output, nb_threads, db_path=arguments.db_path, ref_list_path=arguments.ref_list_path)
+    message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : phylogeny end for {args.suffix}\n"
+    print(message)
+    
 def handle_program_options():
     descr = """\
     Determination of the closest reference to each genome in a folder using mash distance from a reference genomes database. Also peform variant analysis and phylogenetic analysis on the genome based on their closest references.
@@ -378,21 +398,6 @@ def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, nb_threadsdb_p
 
 #add a combination of the closest ref, cluster the strain according to their closest ref, return a list of closest ref and a list of strain associated to each ref.
 
-if __name__ == "__main__": #note: à modifier pour supprimer checkM et passer le programme en souche par souche (input= fasta file)
-    arguments = handle_program_options()
-    path_input = arguments.input
-    output = arguments.output           
-    suffix = arguments.suffix
-    ref_file=arguments.reference_mesh_file
-    metadata=arguments.metadata_file
-    nb_threads=arguments.threads
-    nb_ref=arguments.nb_closest_refl
-    db_path=arguments.download_refseq
-    ref_list_path=arguments.references_list
-
-    message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : closest reference selection start for {suffix}\n"
-    print(message)    
-    process_sample(path_input, suffix, ref_file, nb_ref, output, nb_threads, db_path=arguments.db_path, ref_list_path=arguments.ref_list_path)
-    message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} : phylogeny end for {suffix}\n"
-    print(message)
+if __name__ == "__main__": #initialisation of the workflow
+    main()
 
