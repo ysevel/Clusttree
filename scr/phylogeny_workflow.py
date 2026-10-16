@@ -65,7 +65,7 @@ def handle_program_options():
     return parser.parse_args()
 
 def run_command(cmd, stdout_file=None, stderr_file=None):
-    with (open(stdout_file, "w") if stdout_file else subprocess.DEVNULL) as out, (open(stderr_file, "a") if stderr_file else subprocess.DEVNULL) as err:
+    with (open(stdout_file, "w") if stdout_file else subprocess.DEVNULL) as out, ((open(stderr_file, "a") if stderr_file else subprocess.DEVNULL) as err:
         subprocess.run( cmd, stdout=out, stderr=err, check=True)
 
 def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
