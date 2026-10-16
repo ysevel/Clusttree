@@ -112,7 +112,7 @@ def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, log
     #logger.debug(f"the mash command is: {cmd_mash}")
     log_mash=f"{output}/{id_sample}_{suffix}_filter_reads.log"
     #run mash dist using the new wrapper run_command
-    rum_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file, log_mash)
+    run_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file, log_mash)
     #old way of calling subprocess:
     #with open(mash_dist_file, "w") as out_mash, open(log_mash ,"a") as err:
         #results = subprocess.run(["mash", "dist", "-p", str(threads), str(ref_mash], str(assembly_file)], stdout=out_mash, stderr=err, check=True)
