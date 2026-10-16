@@ -65,8 +65,8 @@ def handle_program_options():
     return parser.parse_args()
 
 def run_command(cmd, stdout_file=None, stderr_file=None):
-    with (open(stdout_file, "w") if stdout_file else subprocess.DEVNULL) as out, ((open(stderr_file, "a") if stderr_file else subprocess.DEVNULL) as err:
-        subprocess.run(cmd, stdout=out, stderr=err, check=True)
+    with (open(stdout_file, "w") if stdout_file else subprocess.DEVNULL) as out:
+        subprocess.run(cmd, stdout=out, stderr=stderr_file, check=True)
 
 def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
     '''This function generate a mesh distance matrix from a list of reference genomes.'''
@@ -75,8 +75,7 @@ def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
     log_mash=f"{output_dir}/mash_dist_{suffix}.log"
     with open(log_mash,"a") as log_m:
         output_mesh_file=f"{output_dir}/NCBI_repr_{suffix}.msh" #output file get automatically named, it can be changed safely here.
-        cmd_mash=f"mash sketch -p {nb_threads} -l {path_ref_list} -o {output_mesh_file}"
-        subprocess.run(cmd_mash, stdout=log_m, stderr=subprocess.STDOUT, shell=True, check=True)
+        run_command(["mash", "sketch", "-p", str{nb_threads}, "-l", {path_ref_list}, "-o", {output_mesh_file}], log_m, subprocess.STDOUT)
     return output_mesh_file #return the mash sketch file to be used in launch mash.
 
 def download_reference(ref_dir, suffix, path_ref_list, nb_threads, logger): 
@@ -112,7 +111,7 @@ def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, log
     #logger.debug(f"the mash command is: {cmd_mash}")
     log_mash=f"{output}/{id_sample}_{suffix}_filter_reads.log"
     #run mash dist using the new wrapper run_command
-    run_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file, log_mash)
+    run_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file)
     #old way of calling subprocess:
     #with open(mash_dist_file, "w") as out_mash, open(log_mash ,"a") as err:
         #results = subprocess.run(["mash", "dist", "-p", str(threads), str(ref_mash], str(assembly_file)], stdout=out_mash, stderr=err, check=True)
