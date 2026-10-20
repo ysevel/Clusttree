@@ -64,9 +64,14 @@ def handle_program_options():
     group.add_argument('-d', '--download_refseq', help='Output folder to download the whole refseq database for bacteria and archeae. Other databaese can be used, but have to be downloaded manually.')
     return parser.parse_args()
 
-def run_command(cmd, stdout_file=None, stderr_file=None):
-    with (open(stdout_file, "w") if stdout_file else subprocess.DEVNULL) as out:
-        subprocess.run(cmd, stdout=out, stderr=stderr_file, check=True)
+def run_command(cmd, stdout_file,logger):
+    for i, arg in enumerate(cmd):
+        if not isinstance(arg, str):
+            error_msg=f"cmd[{i}]={arg!r} est de type {type(arg).__name__}, expect str"
+            logger.error(error_msg)
+            raise TypeError(error_msg)
+    with open(stdout_file, "w") as out:
+        subprocess.run(cmd, stdout=out, stderr=subprocess.STDOUT, check=True)
 
 def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
     '''This function generate a mesh distance matrix from a list of reference genomes.'''
@@ -75,7 +80,7 @@ def generate_reference(path_ref_list, output_dir, suffix, nb_threads, logger):
     log_mash=f"{output_dir}/mash_dist_{suffix}.log"
     with open(log_mash,"a") as log_m:
         output_mesh_file=f"{output_dir}/NCBI_repr_{suffix}.msh" #output file get automatically named, it can be changed safely here.
-        run_command(["mash", "sketch", "-p", str{nb_threads}, "-l", {path_ref_list}, "-o", {output_mesh_file}], log_m, subprocess.STDOUT)
+        run_command(["mash", "sketch", "-p", str{nb_threads}, "-l", {path_ref_list}, "-o", {output_mesh_file}], log_m, logger)
     return output_mesh_file #return the mash sketch file to be used in launch mash.
 
 def download_reference(ref_dir, suffix, path_ref_list, nb_threads, logger): 
@@ -111,11 +116,10 @@ def launch_mash(assembly_file, id_sample,ref_mash , output, suffix, threads, log
     #logger.debug(f"the mash command is: {cmd_mash}")
     log_mash=f"{output}/{id_sample}_{suffix}_filter_reads.log"
     #run mash dist using the new wrapper run_command
-    run_command(["mash", "dist", "-p", str(threads), ref_mash, assembly_file], mash_dist_file)
     #old way of calling subprocess:
-    #with open(mash_dist_file, "w") as out_mash, open(log_mash ,"a") as err:
-        #results = subprocess.run(["mash", "dist", "-p", str(threads), str(ref_mash], str(assembly_file)], stdout=out_mash, stderr=err, check=True)
-    #logger.info(results.stdout.strip()) #should look at the output in details in the log. is that the b'' in the log? to test before release...
+    with open(mash_dist_file, "w") as out_mash, open(log_mash ,"a") as err:
+        results = subprocess.run(["mash", "dist", "-p", str(threads), str(ref_mash], str(assembly_file)], stdout=out_mash, stderr=err, check=True)
+    logger.info(results.stdout.strip()) #should look at the output in details in the log. is that the b'' in the log? to test before release...
     return mash_dist_file
 
 def closest_ref_finder(id_sample, mash_dist_file, nb_closest_ref, reference_groups, output, logger):
@@ -152,10 +156,19 @@ def getphylo(genbank_dir,output_getphylo, seed, nb_threads, logger):
         logger.warning(f"The folder {output_getphylo} already exist, it has been deleted for getphylo to run again.")
     os.makedirs(f"{output_getphylo}", exist_ok=True)
     log_phylo=f"{output_getphylo}/getphylo_log_{suffix}.log"
-    command_getphylo=f"getphylo -g '{genbank_dir}/*.gbff' -s {seed} -o {output_getphylo} -p 20 -c {nb_threads} -m iqtree -ia" #run get phylo on the unique gene present in 20% of the dataset.
+    #command_getphylo=f"getphylo -g '{genbank_dir}/*.gbff' -s {seed} -o {output_getphylo} -p 20 -c {nb_threads} -m iqtree -ia" 
     logger.info(f"Running getphylo with cmd: {command_getphylo}")
-    with open(log_phylo, 'w') as log_p:
-        subprocess.run(command_getphylo,stdout=log_p, stderr=subprocess.STDOUT, shell=True, check=True)
+    run_command([
+                "getphylo",
+                "-g", f"{genbank_dir}/*.gbff",
+                "-s", seed, "use the seed parameter as a genome to process first for defining the set of markers, it should be a genome with a high completeness (here it's the reference from the most abundant population)
+                "-o",output_getphylo,
+                "-p", "20", #run get phylo on the unique gene present in 20% of the dataset.
+                "-c",str(nb_threads),
+                "-m", "iqtree",
+                "-ia"],
+                log_phylo, logger 
+                )                
     return
     
 
@@ -172,6 +185,7 @@ def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref_gbk,
             sag_id_list.append(SAG_id)
             command_snippy_variant=f"snippy --ctgs '{SAGs}' --ref {closest_ref_gbk} --cpus {nb_threads} --outdir {output_dir}/{SAG_id}"
             logger.debug(f"running snippy on {SAG_id} with the command: {command_snippy_variant}")
+            run_command(["snippy", "--ctgs", SAGs, "--ref", closest_ref_bgk, "--cpu", str(nb_threads), "--outdir", f"{output_dir}/{SAG_id}"])
             subprocess.run(command_snippy_variant,stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True)
             snpeff_ref_dir=f"{output_dir}/{SAG_id}/reference"
         #os.chdir(output_dir) #obsolete, can lead to various annoying bugs.
