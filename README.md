@@ -1,9 +1,8 @@
 # Singelcell_phylogenic_workflow
-this is a beta version of a workflow for phylogeneic reconstruction.
 
-This tool aim at reconstruct the population structure and the phylogeny of a bacterial community.
+Clusttree is a phylogenomic workflow for automatic reference selection, genome annotation, variant calling and phylogenetic reconstruction from bacterial genome assemblies. it's currently a very beta version that will undergo various updates soon.
 
-The tools is designed study a diverse community from singlecell of metagenomic study. it will:
+The tools is designed study a diverse community from singlecell or metagenomic study. it will:
 
 - determine the closest reference of each genome (SAG/MAG) using a very fast kmer method using mash)
 
