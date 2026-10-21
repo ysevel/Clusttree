@@ -57,11 +57,11 @@ def handle_program_options():
     parser.add_argument('-s', '--suffix', required=True,
                         help="suffix added to each output file")
     parser.add_argument('-m', '--metadata_file', help="path to the reference database metadatas") #not used at the moment, obsolete? maybe turn into an output later on
-    parser.add_argument('-n', '--nb_closest_ref', type=int, default=1, help="number of ref to be included. it will select the x closest reference from the query genome (default=1)") #keep to be able switch to mixed ref prediction
+    parser.add_argument('-n', '--nb_closest_ref', type=int, default=1, help="number of ref to be included. it will select the x closest reference from the query genome (default=1)") #keep to be able switch to multiples ref in getphylo
     group = parser.add_mutually_exclusive_group(required=True) #optional starting point for the pipeline, either build the db, or construct mash matrix or calculate the distance to an existing matrix.
     group.add_argument('-r', '--reference_mesh_file', help="reference mash mesh file to use as a comparison with each SAG to determine the closest reference file.")
     group.add_argument('-l', '--references_list', help= "file with the list of references to generate the mash mesh file from.")
-    group.add_argument('-d', '--download_refseq', help='Output folder to download the whole refseq database for bacteria and archeae. Other databaese can be used, but have to be downloaded manually.')
+    group.add_argument('-d', '--download_refseq', help='Output folder to download the whole refseq database for bacteria and archeae. Other database can be used, but have to be downloaded manually and given to the workflow using the --reference-list options.')
     return parser.parse_args()
 
 def run_command(cmd, stdout_file,logger):
@@ -132,12 +132,12 @@ def closest_ref_finder(id_sample, mash_dist_file, nb_closest_ref, reference_grou
         out_file=f"{output}/mash_distance/{id_sample}_top_ref.csv" #save top ref into msh distance folder for tracability
         top_ref.to_csv(out_file, index=False)
         logger.debug(f"The {nb_closest_ref}th top ref are writen in the file: {out_file}") #do we keep it or not? can be used for fastANI...
-        closest_ref=df.nsmallest(1, "distance").iloc[0]
+        closest_ref=df.nsmallest(1, "distance").iloc[0] #keep only the reference with the smaller mash distance from the SAG
         closest_ref_name=str(closest_ref["reference"])
         file_name=os.path.basename(closest_ref_name)
         sample_name=str(closest_ref["query"])
-        reference_groups[closest_ref_name]['SAGs'].append(sample_name)
-        match = re.match(r'^(GCF|GCA)_\d+', file_name) #recover the accession ID from the file name.
+        reference_groups[closest_ref_name]['SAGs'].append(sample_name) #link the SAG with its closest reference to have a list of SAG for each reference.
+        match = re.match(r'^(GCF|GCA)_\d+', file_name) #recover the accession ID from the file name, requiere using files with NCBI accession in their names.
         accession= None #accession do not exist by default.
     #Check if the accession exist, if so, save it and return it.
     if match:
