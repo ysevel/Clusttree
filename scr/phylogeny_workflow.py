@@ -169,31 +169,44 @@ def getphylo(genbank_dir,output_getphylo, seed, nb_threads, logger):
     return
     #this function will cluster the strains according to their closest reference, then output them to various list of strain, based on the reference.
 
-def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref, suffix, logger): #run mutli snippy on the dataset using the closest reference
+def variantcalling(fasta_dir, output_dir, sag_list, nb_threads, closest_ref_gbk, suffix, logger): #run multi snippy on the dataset using the closest reference
+    '''Function to peform variant calling and phylogeny on a cluster of strains using the same reference, the reference is used to align all assembly and perform variant calling, recombinasion free phylogeny is comptued using IQ-tree and ClonalFrameML '''
     log_snippy=f"{output_dir}/snippy_{suffix}.log"
-    #changer env to snippy...
     with open(log_snippy,'w') as log_v:
-        logger.info(f"running snippy on each fasta file associated with {closest_ref}: {sag_list}")
+        logger.debug(f"running snippy on each fasta file associated with {closest_ref_gbk}: {sag_list}")
         sag_id_list=[]
-        reference_name=Path(closest_ref).stem
+        reference_name=Path(closest_ref_gbk).stem
+        #run snippy for each genome:
         for SAGs in sag_list:
-            print(SAGs)
             SAG_id=Path(SAGs).stem
-            print(SAG_id)
             sag_id_list.append(SAG_id)
-            command_snippy_variant=f"snippy --ctgs '{SAGs}' --ref {closest_ref} --cpus {nb_threads} --outdir {output_dir}/{SAG_id}"
-            print(command_snippy_variant)
-            subprocess.run(command_snippy_variant,stdout=log_v, stderr=subprocess.STDOUT, shell=True)
+            command_snippy_variant=f"snippy --ctgs '{SAGs}' --ref {closest_ref_gbk} --cpus {nb_threads} --outdir {output_dir}/{SAG_id}"
+            logger.debug(f"running snippy on {SAG_id} with the command: {command_snippy_variant}")
+            run_command(["snippy", "--ctgs", SAGs, "--ref", closest_ref_bgk, "--cpu", str(nb_threads), "--outdir", f"{output_dir}/{SAG_id}"])
+            subprocess.run(command_snippy_variant,stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True)
+            snpeff_ref_dir=f"{output_dir}/{SAG_id}/reference"
+        #os.chdir(output_dir) #obsolete, can lead to various annoying bugs.
         sag_str=' '.join(f"{str(e)}" for e in sag_id_list) #check the output.
-        command_snippy_core=f"snippy-core --ref {closest_ref} {sag_str} --prefix {suffix}_{reference_name}"
-        logger.info(f"running snippy core for {closest_ref}")
-        logger.info(command_snippy_core)
-        subprocess.run(command_snippy_core, cwd=output_dir, stdout=log_v, stderr=subprocess.STDOUT, shell=True)
+        command_snippy_core=f"snippy-core --ref {closest_ref_gbk} {sag_str} --prefix {suffix}_{reference_name}"
+        logger.info(f"running snippy core for {reference_name}")
+        logger.debug(command_snippy_core)
+        subprocess.run(command_snippy_core,cwd=output_dir, stdout=log_v, stderr=subprocess.STDOUT, shell=True, check =True)
         logger.info(f"snippy core done, preparing subtree prediction")
-        cmd_iqtree=f"iqtree -T AUTO -s {output_dir}/{suffix}_{reference_name}.aln -m MFP --prefix {suffix}_subtree_{reference_name}" #use the maximal amount of threads, use nb_threads instead?
-        logger.info(f"running iqtree: {cmd_iqtree}")
-        subprocess.run(cmd_iqtree, stdout=log_v, stderr=subprocess.STDOUT, shell=True)
-        logger.info(f"subtree succesfully computed for {closest_ref}")
+        cmd_iqtree=f"iqtree -T AUTO -s {output_dir}/{suffix}_{reference_name}.full.aln -m MFP --prefix {suffix}_subtree_{reference_name} -safe" #use the maximal amount of threads.
+        logger.debug(f"running iqtree: {cmd_iqtree}")
+        subprocess.run(cmd_iqtree, stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True)
+        #filter recombination event:
+        logger.info("running ClonalFramel on the initial tree")
+        cmd_clonalframe=f"ClonalFrameML {output_dir}/{suffix}_subtree_{reference_name}.treefile {output_dir}/{suffix}_{reference_name}.full.aln {output_dir}/{suffix}_{reference_name}_CFML -output_filtered true -ignore_incomplete_sites true" #produce filtered variant fasta
+        logger.debug(f"Clonalframe command: {cmd_clonalframe}")
+        subprocess.run(cmd_clonalframe,cwd=output_dir , stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True) #ERROR: currently clonalframe won't run on genouest.
+        logger.info("Running IQ tree on the recombination free alignement")
+        #run IQ-tree on the filtered variants:
+        cmd_iqtree_filtered=f"iqtree -T AUTO -s {output_dir}/{suffix}_{reference_name}_CFML.filtered.fasta -m MFP --prefix {suffix}_subtree_{reference_name} -safe"
+        logger.debug(f"final iq tree command: {cmd_iqtree_filtered}")
+        subprocess.run(cmd_iqtree_filtered, stdout=log_v, stderr=subprocess.STDOUT, shell=True, check=True) #currently unavailable, must be put back on for the full intended workflow.
+        logger.info(f"subtree succesfully computed for {closest_ref_gbk}")
+        annotate_variants(output_dir, suffix, nb_threads, reference_name, snpeff_ref_dir, logger)
     return
 
 def process_sample(path_input, suffix, ref_file, nb_ref, run_dir, genbank_dir, nb_threads, email):
