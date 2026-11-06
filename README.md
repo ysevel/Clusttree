@@ -11,7 +11,7 @@ The tool is designed for singlecell or metagenomic study. It will:
 - produce a community level "tree of life" phylogeny using getphylo.
 
 ## Structure of the workflow:
-<img width="1001" height="368" alt="Clustree_workflow" src="https://github.com/ysevel/Clusttree/blob/main/Image/Workflow_structure.png" />
+<img width="1478" height="720" alt="Clustree_workflow" src="https://github.com/ysevel/Clusttree/blob/main/Image/Workflow_structure.png" />
 
 ## Parameters
 ### Required parameters
