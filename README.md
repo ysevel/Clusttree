@@ -1,5 +1,4 @@
 # Clusttree
-
 Clusttree is a phylogenomic workflow for automatic reference selection, genome annotation, variant calling and phylogenetic reconstruction from bacterial genome assemblies.
 
 The tool is designed for singlecell or metagenomic study. It will:
@@ -13,10 +12,20 @@ The tool is designed for singlecell or metagenomic study. It will:
 ## Structure of the workflow:
 <img width="1478" height="720" alt="Clustree_workflow" src="https://github.com/ysevel/Clusttree/blob/main/Image/Workflow_structure.png" />
 
+## Usage
+### In one command
+python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] (Optionnal parameters)
+
+### Step by step
+python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] -ds reference_selection
+
+python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] -ds variant_calling
+
+python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] -ds phylogenomy
+
 ## Parameters
 ### Required parameters
-
--i --input (required) : Path to the folders containing the annotated genomes (format: genbank)
+-i --input (required) : Path to the folder containing the annotated genomes (format: genbank)
 
 -o --output (required) : path to the output folder.
 
@@ -25,15 +34,13 @@ The tool is designed for singlecell or metagenomic study. It will:
 -b --bakta_db (required) : Path to bakta database for genome annotation
 
 #### Mutually exclusive start parameters:
-
 -r --reference_mesh_file : Reference sketch distance matrix file to use as a comparison with each SAG to determine the closest reference file.
 
 -l --reference_list : File with the list of references to generate the sketch matrix from. The file should either be in the working directory or given as path.
 
--d --download-refseq : Output folder to download the whole refseq database for bacteria and archeae, will download all the reference genomes from refseq and automatically generate a sketch matrix for all those references.
+-d --download-refseq : Output folder to download the whole RefSeq database for Bacteria and Archaea, will download all the reference genomes from RefSeq and automatically generate a sketch matrix for all those references.
 
 ### Optional parameters
-
 -t --threads (default=1) : number of threads allocated to the workflow.
 
 -n --nb_closest_ref (default=1) : Number of ref to be included. It will select the n closest reference from the query genome.
@@ -43,7 +50,6 @@ The tool is designed for singlecell or metagenomic study. It will:
 
 
 ## Requirements:
-
 Bakta >= 1.11.4: https://github.com/oschwengers/bakta
 
 getphylo >= 1.0.1: https://github.com/drboothtj/getphylo
