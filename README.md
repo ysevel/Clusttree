@@ -16,13 +16,13 @@ The tool is designed for singlecell or metagenomic study. It will:
 ## Parameters
 ### Required parameters
 
--i --input (required): Path to the folders containing the annotated genomes (format: genbank)
+-i --input (required) : Path to the folders containing the annotated genomes (format: genbank)
 
--o --output (required): path to the output folder.
+-o --output (required) : path to the output folder.
 
--s --suffix (required): suffix for the output file and run directory.
+-s --suffix (required) : suffix for the output file and run directory.
 
--b --bakta_db (required): Path to bakta database for genome annotation
+-b --bakta_db (required) : Path to bakta database for genome annotation
 
 #### Mutually exclusive start parameters:
 
@@ -34,11 +34,11 @@ The tool is designed for singlecell or metagenomic study. It will:
 
 ### Optional parameters
 
--t --threads (default=1): number of threads allocated to the workflow.
+-t --threads (default=1) : number of threads allocated to the workflow.
 
--n --nb_closest_ref (default=1): Number of ref to be included. It will select the n closest reference from the query genome.
+-n --nb_closest_ref (default=1) : Number of ref to be included. It will select the n closest reference from the query genome.
 
--ds --divide_step: Launch steps of the pipeline separately. By default launch all steps. Choices are "all", "reference_selection", "variant_calling" and "phylogenomy", see structure of the workflow for details about each step.
+-ds --divide_step : Launch steps of the pipeline separately. By default launch all steps. Choices are "all", "reference_selection", "variant_calling" and "phylogenomy", see structure of the workflow for details about each step.
 
 
 
