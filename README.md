@@ -14,38 +14,42 @@ The tool is designed for singlecell or metagenomic study. It will:
 
 ## Usage
 ### In one command
+```bash
 python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] (Optionnal parameters)
-
+```
 ### Step by step
+```bash
 python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] -ds reference_selection
-
+```
+```bash
 python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] -ds variant_calling
-
+```
+```bash
 python -i [input_folder] -o [output_folder] -s [suffix] -b [bakta_db] -r [reference_mesh_file] | -l [reference_list] | -d [output_download_refseq] -ds phylogenomy
-
+```
 ## Parameters
-### Required parameters
--i --input (required) : Path to the folder containing the annotated genomes (format: genbank)
+### Required para=meters
+`-i --input` (required) : Path to the folder containing the annotated genomes (format: genbank)
 
--o --output (required) : path to the output folder.
+`-o --output` (required) : path to the output folder.
 
--s --suffix (required) : suffix for the output file and run directory.
+`-s --suffix` (required) : suffix for the output file and run directory.
 
--b --bakta_db (required) : Path to bakta database for genome annotation
+`-b --bakta_db` (required) : Path to bakta database for genome annotation
 
 #### Mutually exclusive start parameters:
--r --reference_mesh_file : Reference sketch distance matrix file to use as a comparison with each SAG to determine the closest reference file.
+`-r --reference_mesh_file` : Reference sketch distance matrix file to use as a comparison with each SAG to determine the closest reference file.
 
--l --reference_list : File with the list of references to generate the sketch matrix from. The file should either be in the working directory or given as path.
+`-l --reference_list` : File with the list of references to generate the sketch matrix from. The file should either be in the working directory or given as path.
 
--d --download-refseq : Output folder to download the whole RefSeq database for Bacteria and Archaea, will download all the reference genomes from RefSeq and automatically generate a sketch matrix for all those references.
+`-d --download-refseq` : Output folder to download the whole RefSeq database for Bacteria and Archaea, will download all the reference genomes from RefSeq and automatically generate a sketch matrix for all those references.
 
 ### Optional parameters
--t --threads (default=1) : number of threads allocated to the workflow.
+`-t --threads` (default=1) : number of threads allocated to the workflow.
 
--n --nb_closest_ref (default=1) : Number of ref to be included. It will select the n closest reference from the query genome.
+`-n --nb_closest_ref` (default=1) : Number of ref to be included. It will select the n closest reference from the query genome.
 
--ds --divide_step : Launch steps of the pipeline separately. By default launch all steps. Choices are "all", "reference_selection", "variant_calling" and "phylogenomy", see structure of the workflow for details about each step.
+`-ds --divide_step` : Launch steps of the pipeline separately. By default launch all steps. Choices are "all", "reference_selection", "variant_calling" and "phylogenomy", see structure of the workflow for details about each step.
 
 
 
